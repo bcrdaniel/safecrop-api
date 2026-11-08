@@ -1,0 +1,16 @@
+.git
+.idea
+target
+out
+.env
+.env.*
+!.env.example
+logs
+**/*.log
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*.jks
+**/application-secrets.*
+**/application-*.local.*
