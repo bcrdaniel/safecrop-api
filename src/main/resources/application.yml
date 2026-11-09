@@ -18,6 +18,16 @@ spring:
     ignore-migration-patterns: []
     create-schemas: false
 
+safecrop:
+  login-protection:
+    max-concurrent: 2
+    global-tokens-per-minute: 60
+    global-burst: 2
+  jwt:
+    issuer: safecrop-api
+    audience: safecrop-web
+    ttl-seconds: 900
+
 server:
   port: ${PORT:8080}
   error:
@@ -35,3 +45,10 @@ management:
     health:
       show-details: never
       show-components: never
+
+# These Hibernate emitters include JDBC messages/SQL or full causes before application handling.
+# UnexpectedFailureDiagnostics records safe code metadata for request failures instead.
+logging:
+  level:
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: "OFF"
+    org.hibernate.event.internal.DefaultLoadEventListener: "OFF"

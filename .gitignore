@@ -43,6 +43,8 @@ out/
 .env
 .env.*
 !.env.example
+!.env.production.example
+!.env.migration.example
 application-secrets.properties
 application-secrets.yml
 application-secrets.yaml

@@ -5,6 +5,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.safecrop.company.CompanyRepository;
+import org.safecrop.identity.AppUserRepository;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,6 +32,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Import(FoundationTest.FailingController.class)
 class FoundationTest {
+
+    @MockitoBean
+    private CompanyRepository companies;
+    @MockitoBean
+    private AppUserRepository users;
+    @MockitoBean
+    private JdbcTemplate jdbc;
+
+    @DynamicPropertySource
+    static void secrets(DynamicPropertyRegistry registry) { registry.add("JWT_SECRET", () -> TestSecrets.JWT_SECRET); }
 
     @Autowired
     private MockMvc mvc;
@@ -49,12 +66,17 @@ class FoundationTest {
 
     @Test
     void administrativeEndpointsAreNotExposed() throws Exception {
-        mvc.perform(get("/actuator/env")).andExpect(status().isNotFound());
+        mvc.perform(get("/actuator/env")).andExpect(status().isUnauthorized());
+        for (String path : new String[]{"/api/v1/companies", "/api/v1/users"}) {
+            mvc.perform(get(path)).andExpect(status().isUnauthorized());
+            mvc.perform(post(path).contentType("application/json").content("{}"))
+                    .andExpect(status().isUnauthorized());
+        }
     }
 
     @Test
     void unexpectedErrorDoesNotExposeInternalDetails() throws Exception {
-        mvc.perform(get("/test/failure"))
+        mvc.perform(get("/test/failure").with(user("test")))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
                 .andExpect(jsonPath("$.status").value(500))
@@ -65,7 +87,7 @@ class FoundationTest {
 
     @Test
     void unsupportedMethodKeepsClientErrorStatus() throws Exception {
-        mvc.perform(post("/api/v1/status"))
+        mvc.perform(post("/api/v1/status").with(user("test")))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
     }
